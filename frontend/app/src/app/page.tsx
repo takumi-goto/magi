@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { PDFDocument, rgb } from "pdf-lib";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
+import { marked } from "marked";
 
 interface Message {
   sender: string; // 例: "User" | "GPT(3.5)" | "Gemini(2.0)" | "GPTまとめ"
@@ -92,55 +93,96 @@ export default function Home() {
     }
   };
 
-  const generatePDF = async () => {
-    const pdfDoc = await PDFDocument.create();
-    pdfDoc.registerFontkit(fontkit);
+// ✅ テキストの自動改行処理
+const wrapText = (text: string, font: any, fontSize: number, maxWidth: number) => {
+  const lines: string[] = [];
+  let currentLine = "";
 
-    try {
-      // ✅ フォントを明示的にバイナリデータとして取得
-      const fontBytes = await fetch("/fonts/NotoSansJP-Regular.ttf", {
-        method: "GET",
-        headers: { "Content-Type": "application/octet-stream" }, // ✅ フォントの MIME タイプを指定
-      }).then((res) => res.arrayBuffer());
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const width = font.widthOfTextAtSize(currentLine + char, fontSize);
 
-      const notoSansJP = await pdfDoc.embedFont(fontBytes); // ✅ フォントを埋め込む
-
-      const page = pdfDoc.addPage([600, 800]);
-      const { width, height } = page.getSize();
-
-      page.drawText("議論記録", {
-        x: 50,
-        y: height - 50,
-        size: 20,
-        font: notoSansJP,
-        color: rgb(0, 0, 0),
-      });
-
-      let yOffset = height - 80;
-      messages.forEach((msg) => {
-        page.drawText(`${msg.sender}: ${msg.text}`, {
-          x: 50,
-          y: yOffset,
-          size: 12,
-          font: notoSansJP,
-          color: rgb(0, 0, 0),
-        });
-        yOffset -= 20;
-      });
-
-      const pdfBytes = await pdfDoc.save();
-
-      // ✅ PDF ダウンロード
-      const blob = new Blob([pdfBytes], { type: "application/pdf" });
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = "議論記録.pdf";
-      link.click();
-    } catch (error) {
-      console.error("PDF生成エラー:", error);
+    if (width > maxWidth) {
+      lines.push(currentLine);
+      currentLine = char;
+    } else {
+      currentLine += char;
     }
-  };
+  }
 
+  lines.push(currentLine);
+  return lines;
+};
+
+const generatePDF = async () => {
+  const pdfDoc = await PDFDocument.create();
+  pdfDoc.registerFontkit(fontkit);
+
+  // ✅ 可変フォントを読み込む
+  const fontBytes = await fetch("/fonts/NotoSansJP-VariableFont_wght.ttf").then((res) => res.arrayBuffer());
+  const notoSansJP = await pdfDoc.embedFont(fontBytes);
+
+  let page = pdfDoc.addPage([600, 800]);
+  const { width, height } = page.getSize();
+  let yOffset = height - 50;
+
+  const lineHeight = 16;
+  const marginX = 50;
+  const maxWidth = width - marginX * 2;
+
+  // ✅ ヘッダーを描画
+  page.drawText("議論記録", {
+    x: marginX,
+    y: yOffset,
+    size: 20,
+    font: notoSansJP,
+    color: rgb(0, 0, 0),
+  });
+
+  yOffset -= 30;
+
+  // ✅ マークダウンをHTMLに変換 → テキスト化
+  const markdownText = messages
+    .filter((msg) => msg.sender === "GPTまとめ")
+    .map((msg) => msg.text)
+    .join("\n\n");
+
+  const mdHtml = marked.parse(markdownText, { renderer: new marked.Renderer() }) as string;
+
+  // ✅ マークダウンの太字や斜体を可変フォントで適用
+  const formattedText = mdHtml
+    .replace(/<\/?[^>]+(>|$)/g, "") // HTMLタグを除去
+    .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>") // 太字
+    .replace(/\*(.*?)\*/g, "<i>$1</i>"); // 斜体
+
+  const paragraphs = formattedText.split("\n");
+
+  paragraphs.forEach((paragraph: string) => {
+    const wrappedLines = wrapText(paragraph, notoSansJP, 12, maxWidth);
+
+    wrappedLines.forEach((line) => {
+      page.drawText(line, { x: marginX, y: yOffset, size: 12, font: notoSansJP, color: rgb(0, 0, 0) });
+      yOffset -= lineHeight;
+
+      if (yOffset < 50) {
+        // ✅ ページング処理
+        page = pdfDoc.addPage([600, 800]);
+        yOffset = height - 30;
+      }
+    });
+
+    yOffset -= 5; // 段落間のスペース
+  });
+
+  const pdfBytes = await pdfDoc.save();
+
+  // ✅ PDF ダウンロード処理
+  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "議論記録.pdf";
+  link.click();
+};
 
   /** ✅ チャット欄をクエリに変換する **/
   const clearChat = () => {

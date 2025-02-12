@@ -132,18 +132,19 @@ async def websocket_endpoint(websocket: WebSocket):
         gem_count = 1
         max_comments = 10  # 各AIの最大発言回数
 
-        while gpt_count < 10 and gem_count < 10:
+        while gpt_count < max_comments and gem_count < max_comments:
             attacker_prompt = f"""
             あなたは {attacker} として議論に参加しています。
             相手({defender})の意見:
             {conversation_history[-1][1]}
 
-            攻撃的ではなく建設的に反論や補足を行い、
-            合意が得られそうなら合意を示してください。
-            疑問点や矛盾点があれば質問し、回答を求めてください。
-            (最終的に合意や結論が得られるように努めてください。)
+            1. 論理的な矛盾があるか確認し、あれば明確に指摘してください。
+            2. 必要であれば補足説明を加えてください。
+            3. 議論を続けるべきか、合意して終了するべきかを判断してください。ただし、論理的な矛盾がない、かつ、どうしても述べたいことがなければ、議論を終了してください。
+            4. 発言回数には上限があります。議論を続けるのは構いませんが発言回数を意識して収束するようにしてください
+
             1000文字以内でお願いします。
-            あなたの発言回数は {gpt_count if "GPT" in attacker else gem_count} 回目です。
+            あなたの発言回数は {gpt_count if "GPT" in attacker else gem_count} 回目です。上限は {max_comments} 回です。
             """
 
             try:
@@ -160,9 +161,20 @@ async def websocket_endpoint(websocket: WebSocket):
             conversation_history.append((attacker, attacker_resp))
             await websocket.send_text(json.dumps({"sender": attacker, "text": attacker_resp}))
 
-            # **最低3回話すまでは合意判定を無視**
+            # **最低3回話すまでは終了判定を行わない**
             if gpt_count >= 3 and gem_count >= 3:
-                if "合意" in attacker_resp or "同意" in attacker_resp:
+                confirm_end_prompt = f"""
+                これまでの議論:
+                {conversation_history[-5:]}
+
+                あなたの最新の発言:
+                {attacker_resp}
+
+                議論は終了してもよいですか？「はい」または「いいえ」で答えてください。
+                """
+                confirm_end_response = call_chatgpt(confirm_end_prompt) if "GPT" in attacker else call_gemini(confirm_end_prompt)
+
+                if "はい" in confirm_end_response:
                     break
 
             # 交代
@@ -195,6 +207,8 @@ async def websocket_endpoint(websocket: WebSocket):
             これまでの議論の内容、および提供したデータから、最終的な当該動画のコメント分析結果を詳細にまとめてください。
             客先に提出する内容なので、このレポートを見て動画の振り返りや今後の企画ができるような内容に仕上げてください。
             コメントから見える動画内容への評価や、視聴者の反応についても含めてください。
+            年齢分布予測や性別分布予測などのデモグラフィックデータはチャンネルに対してで動画やコメントから推定した値ではないので注意してください。
+            コメントの書き方などからコメントのポジティブ度、ネガティブ度、性別予測などを割合で出してほしいです。
 
             議論データ:
             {conversation_text}
