@@ -13,3 +13,9 @@ uvicorn==0.34.0
 websockets==14.2
 openai
 google-genai
+boto3
+pandas
+sshtunnel
+paramiko
+pymysql
+python-dotenv
