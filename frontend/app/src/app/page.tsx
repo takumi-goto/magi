@@ -149,13 +149,15 @@ const generatePDF = async () => {
 
   const mdHtml = marked.parse(markdownText, { renderer: new marked.Renderer() }) as string;
 
-  // ✅ マークダウンの太字や斜体を可変フォントで適用
-  const formattedText = mdHtml
-    .replace(/<\/?[^>]+(>|$)/g, "") // HTMLタグを除去
-    .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>") // 太字
-    .replace(/\*(.*?)\*/g, "<i>$1</i>"); // 斜体
+  // ✅ 不要なHTMLタグを削除（<b>, <strong>, <i>, <em> など）
+  const plainText = mdHtml
+    .replace(/<\/?(b|strong|i|em|pre|code)[^>]*>/g, "")  // <b>, <i>, <pre>, <code> など削除
+    .replace(/\*\*(.*?)\*\*/g, "$1")  // **太字** → 太字
+    .replace(/__(.*?)__/g, "$1")      // __太字__ → 太字
+    .replace(/`([^`]*)`/g, "$1")      // `インラインコード` → インラインコード
+    .replace(/<\/?[^>]+(>|$)/g, "");  // その他のHTMLタグを削除
 
-  const paragraphs = formattedText.split("\n");
+  const paragraphs = plainText.split("\n");
 
   paragraphs.forEach((paragraph: string) => {
     const wrappedLines = wrapText(paragraph, notoSansJP, 12, maxWidth);
