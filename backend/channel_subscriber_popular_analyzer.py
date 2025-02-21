@@ -51,7 +51,7 @@ class ChannelPopularityAnalyzer:
 
         data = self.__get_popular_channel_data()
 
-        return [channel["channel_id"] for channel in data]
+        return [channel["subscriber_popular_youtube_channel_id"] for channel in data]
 
 
     def __channels_data(self) -> list:
