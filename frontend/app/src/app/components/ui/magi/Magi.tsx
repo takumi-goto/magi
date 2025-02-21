@@ -5,8 +5,8 @@ import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { marked } from "marked";
 import WebSocketManager from "../../../utils/WebSocketManager";
-import { Textarea, Button, Space, Group, Title, Box, Stack, Radio, Paper, Avatar, Text, ScrollArea } from '@mantine/core';
-import { IconDownload } from '@tabler/icons-react';
+import { Textarea, Button, Space, Group, Title, Box, Stack, Radio, Paper, Avatar, Text, ScrollArea, Accordion, Input} from '@mantine/core';
+import { IconDownload, IconChevronDown } from '@tabler/icons-react';
 
 interface Message {
   sender: string; // 例: "User" | "GPT(3.5)" | "Gemini(2.0)" | "GPTまとめ"
@@ -233,17 +233,33 @@ export default function Magi() {
       </Stack>
 
       <Stack h={700} bg="var(--mantine-color-body)" align="stretch" justify="center" gap="lg">
-        {/* 分析タイプ選択 */}
-        <Radio.Group
-          value={analysisType} // 選択された値を管理
-          onChange={setAnalysisType} // チェックされた時に state 更新
-        >
-          <Group>
-            <Radio label="分析なし" value="none" />
-            <Radio label="コメント分析" value="comment_analysis" />
-            <Radio label="視聴者人気のチャンネル分析" value="channel_subscriber_popular_channel" />
-          </Group>
-        </Radio.Group>
+        {/* ✅ 分析タイプ選択（アコーディオンで YouTube Video ID 入力） */}
+        <Accordion variant="separated">
+          <Accordion.Item value="analysis">
+            <Accordion.Control icon={<IconChevronDown size={14} />}>
+              分析オプション
+            </Accordion.Control>
+            <Accordion.Panel>
+              <Radio.Group value={analysisType} onChange={setAnalysisType}>
+                <Group>
+                  <Radio label="分析なし" value="none" />
+                  <Radio label="コメント分析" value="comment_analysis" />
+                  <Radio label="視聴者人気のチャンネル分析" value="channel_subscriber_popular_channel" />
+                </Group>
+              </Radio.Group>
+
+              {/* ✅ 「コメント分析」選択時に YouTube Video ID の Input を表示 */}
+              {analysisType === "comment_analysis" && (
+                <Input
+                  placeholder="YouTube Video ID を入力"
+                  value={videoId}
+                  onChange={(e) => setVideoId(e.target.value)}
+                  mt="sm"
+                />
+              )}
+            </Accordion.Panel>
+          </Accordion.Item>
+        </Accordion>
 
         <ScrollArea h={800} viewportRef={viewport} style={{ borderRadius: "8px", backgroundColor: "#f0f0f0", padding: "10px" }}>
           {messages.map((msg, idx) => renderMessage(msg, idx))}
