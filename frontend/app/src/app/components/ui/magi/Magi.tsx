@@ -5,6 +5,8 @@ import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { marked } from "marked";
 import WebSocketManager from "../../../utils/WebSocketManager";
+import { Textarea, Button, Space, Group, Title, Box, Stack, Radio, Paper, Avatar, Text, ScrollArea } from '@mantine/core';
+import { IconDownload } from '@tabler/icons-react';
 
 interface Message {
   sender: string; // 例: "User" | "GPT(3.5)" | "Gemini(2.0)" | "GPTまとめ"
@@ -22,13 +24,12 @@ export default function Magi() {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   /** ✅ メッセージが追加されるたびにスクロール */
+  const viewport = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (messagesEndRef.current) {
-      setTimeout(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }, 100);
+    if (viewport.current) {
+      viewport.current.scrollTo({ top: viewport.current.scrollHeight, behavior: "smooth" });
     }
-  }, [messages]);
+  }, [messages]); // メッセージが追加されたときに発火
 
   /** ✅ WebSocket の接続とリスナーを設定 */
   useEffect(() => {
@@ -74,23 +75,47 @@ export default function Magi() {
 
   /** ✅ メッセージ表示処理 */
   const renderMessage = (msg: Message, index: number) => {
-    let alignment = "justify-start";
-    let bgColor = "bg-blue-200";
+    const isUser = msg.sender === "User";
+    const isGemini = msg.sender.includes("Gemini");
+    const isGPT = msg.sender.includes("GPT");
 
-    if (msg.sender.includes("Gemini")) {
-      alignment = "justify-end";
-      bgColor = "bg-green-200";
-    } else if (msg.sender === "User") {
-      alignment = "justify-center";
-      bgColor = "bg-gray-300";
-    }
+    // ✅ 色分け
+    const bgColor = isUser ? "blue.6" : isGemini ? "green.6" : isGPT ? "violet.6" : "gray.6";
 
     return (
-      <div key={`${msg.sender}-${msg.text}-${index}`} className={`flex mb-2 ${alignment}`}>
-        <div className={`p-2 rounded-lg max-w-xs ${bgColor}`}>
-          <strong>{msg.sender}:</strong> {msg.text}
-        </div>
-      </div>
+      <Group
+        key={`${msg.sender}-${msg.text}-${index}`}
+        align="flex-start"
+        justify={isUser ? "flex-end" : "flex-start"}
+        gap="xs"
+        style={{ marginBottom: "10px" }}
+      >
+        {!isUser && (
+          <Avatar
+            radius="xl"
+            src={isGemini ? "/gemini.png" : isGPT ? "/gpt.png" : "/default-avatar.png"}
+            size={40}
+          />
+        )}
+
+        <Paper
+          shadow="xs"
+          radius="md"
+          p="md"
+          bg={bgColor}
+          style={{
+            maxWidth: "70%",
+            color: "white",
+            wordBreak: "break-word",
+            lineHeight: "1.6",
+          }}
+        >
+          <Text size="sm" fw={500}>{msg.sender}</Text>
+          <Text size="sm">{msg.text}</Text>
+        </Paper>
+
+        {isUser && <Avatar radius="xl" src="/user-avatar.png" size={40} />}
+      </Group>
     );
   };
 
@@ -176,53 +201,70 @@ export default function Magi() {
   };
 
   return (
-    <div className="h-screen flex flex-col p-4">
-      <h1 className="text-2xl font-bold mb-4">MAG(K)I波MARI イラストりあす</h1>
+    <>
+      <Stack
+        h={300}
+        bg="var(--mantine-color-body)"
+        align="stretch"
+        justify="center"
+        gap="lg"
+      >
+        <Title order={1}>MAG(K)I:||</Title>
+        <Space />
+        <Box style={{ overflow: 'hidden' }}>
+          <Group>
+            <Textarea
+              placeholder="議題やメッセージを入力..."
+              value={topic}
+              size="sm"
+              w="70%"
+              onChange={(event) => setTopic(event.target.value)}
+            />
+            <Space />
+            <Button variant="filled" color="teal" onClick={sendMessage} disabled={!WebSocketManager.isConnected || !topic.trim()}>
+              送信
+            </Button>
+            <Space />
+            {/* チャットをクリアボタンを追加 */}
+            <Button variant="filled" color="gray" onClick={clearChat} disabled={messages.length === 0}>
+              チャット欄をクリア
+            </Button>
+          </Group>
+        </Box>
+      </Stack>
 
-      <div className="mt-4 flex space-x-2">
-        <input
-          className="border p-2 flex-1"
-          type="text"
-          placeholder="議題やメッセージを入力..."
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-        />
-        <button onClick={sendMessage} className="bg-blue-500 text-white px-4 py-2 rounded" disabled={!WebSocketManager.isConnected || !topic.trim()}>
-          送信
-        </button>
-				{/* チャットをクリアボタンを追加 */}
-				<button onClick={clearChat} className="bg-purple-500 text-white px-4 py-2 rounded mt-2" disabled={messages.length === 0}>
-          チャット欄をクリア
-        </button>
-      </div>
+      <Stack h={700} bg="var(--mantine-color-body)" align="stretch" justify="center" gap="lg">
+        {/* 分析タイプ選択 */}
+        <Radio.Group
+          value={analysisType} // 選択された値を管理
+          onChange={setAnalysisType} // チェックされた時に state 更新
+        >
+          <Group>
+            <Radio label="分析なし" value="none" />
+            <Radio label="コメント分析" value="comment_analysis" />
+            <Radio label="視聴者人気のチャンネル分析" value="channel_subscriber_popular_channel" />
+          </Group>
+        </Radio.Group>
 
-      {/* 分析タイプ選択 */}
-      <div className="mt-4">
-        <label>
-          <input type="radio" value="none" checked={analysisType === "none"} onChange={() => setAnalysisType("none")} />
-          分析なし
-        </label>
-        <label>
-          <input type="radio" value="comment_analysis" checked={analysisType === "comment_analysis"} onChange={() => setAnalysisType("comment_analysis")} />
-          コメント分析
-        </label>
-        <label>
-          <input type="radio" value="channel_subscriber_popular_channel" checked={analysisType === "channel_subscriber_popular_channel"} onChange={() => setAnalysisType("channel_subscriber_popular_channel")} />
-          視聴者人気のチャンネル分析
-        </label>
-      </div>
+        <ScrollArea h={800} viewportRef={viewport} style={{ borderRadius: "8px", backgroundColor: "#f0f0f0", padding: "10px" }}>
+          {messages.map((msg, idx) => renderMessage(msg, idx))}
+        </ScrollArea>
 
-      <div className="flex-1 bg-gray-100 p-4 rounded overflow-y-auto">
-        {messages.map((msg, idx) => renderMessage(msg, idx))}
-      </div>
-
-      {messages.length > 0 && messages[messages.length - 1].sender === "GPTまとめ" && (
-        <button onClick={generatePDF} className="bg-red-500 text-white px-4 py-2 rounded mt-2">
-          PDFで出力
-        </button>
-      )}
+        {messages.length > 0 && messages[messages.length - 1].sender === "GPTまとめ" && (
+          <Button
+            variant="filled"
+            color="red"
+            onClick={generatePDF}
+            w="fit-content"
+            miw={150}
+            rightSection={<IconDownload size={14} />}
+          >
+            PDFで出力
+          </Button>
+        )}
+      </Stack>
 
       <p className="mt-2">Status: {WebSocketManager.isConnected ? "Connected" : "Disconnected"}</p>
-    </div>
+    </>
   );
 }

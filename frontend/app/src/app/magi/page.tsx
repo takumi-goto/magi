@@ -1,11 +1,16 @@
 "use client";
 
 import Magi from "../components/ui/magi/Magi";
+import { Container } from '@mantine/core';
 
 export default function MagiPage() {
+  const props = {
+    h: 50,
+    mt: 'xl',
+  };
   return (
-    <div className="p-4">
+    <Container fluid {...props}>
       <Magi />
-    </div>
+    </Container>
   );
 }
