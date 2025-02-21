@@ -50,7 +50,8 @@ class ChannelPopularityAnalyzer:
         print(f"実行中のメソッド: {inspect.currentframe().f_code.co_name}")
 
         data = self.__get_popular_channel_data()
-        return data["youtube_channel_id"]  # ← ここがリストだった場合はエラー
+
+        return [channel["channel_id"] for channel in data]
 
 
     def __channels_data(self) -> list:
