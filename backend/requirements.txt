@@ -19,3 +19,9 @@ sshtunnel
 paramiko
 pymysql
 python-dotenv
+uvicorn
+requests
+pillow
+matplotlib
+numpy
+opencv-python-headless
