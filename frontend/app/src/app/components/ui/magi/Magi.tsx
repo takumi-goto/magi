@@ -210,7 +210,6 @@ export default function Magi() {
         gap="lg"
       >
         <Title order={1}>MAG(K)I:||</Title>
-        <Space />
         <Box style={{ overflow: 'hidden' }}>
           <Group>
             <Textarea
