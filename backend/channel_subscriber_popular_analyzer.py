@@ -1,5 +1,7 @@
 from db_utils import DBClient
 from s3_utils import S3Client
+import inspect
+import json
 
 class ChannelPopularityAnalyzer:
     """
@@ -23,7 +25,8 @@ class ChannelPopularityAnalyzer:
     def create_data(self):
         return {
             "target_channel_data": self.__a_channel_data(self.youtube_channel_id),
-            "popular_channels_data": self.__channels_data()
+            "popular_channels_data": self.__channels_data(),
+            "popular_channels_csv_data": self.__get_popular_channel_data(),
         }
 
     def __get_popular_channel_data(self):
@@ -33,15 +36,22 @@ class ChannelPopularityAnalyzer:
         print(f"実行中のメソッド: {inspect.currentframe().f_code.co_name}")
         s3_key = f"channel_subscriber_popular_channels/{self.youtube_channel_id}/{self.youtube_channel_id}.json"
         text = self.s3.load_json_as_text(s3_key)
-        return text
+        try:
+            data = json.loads(text)  # ✅ JSON 文字列を辞書に変換
+            return data
+        except json.JSONDecodeError as e:
+            print(f"JSON デコードエラー: {e}")
+            return {"error": "Invalid JSON format"}
 
     def extract_youtube_channel_id_from_json_data(self) -> list:
         """
         JSONデータからチャンネルIDを抽出
         """
         print(f"実行中のメソッド: {inspect.currentframe().f_code.co_name}")
+
         data = self.__get_popular_channel_data()
-        return data["youtube_channel_id"]
+        return data["youtube_channel_id"]  # ← ここがリストだった場合はエラー
+
 
     def __channels_data(self) -> list:
         """
@@ -70,12 +80,12 @@ class ChannelPopularityAnalyzer:
         }
 
     # デモグラデータ
-    def __fetch_age_demogra(self):
+    def __fetch_age_demogra(self, channel_id: str):
         """
         デモグラデータを取得
         """
         print(f"実行中のメソッド: {inspect.currentframe().f_code.co_name}")
-        ages = self.db.fetch_age_demogra_data(self.channel_id)
+        ages = self.db.fetch_age_demogra_data(channel_id)
         return {
             "13〜17歳": f"{ages["prediction_age_13_17"] * 100}%",
             "18~24歳": f"{ages["prediction_age_18_24"] * 100}%",
@@ -86,12 +96,12 @@ class ChannelPopularityAnalyzer:
             "65歳以上": f"{ages["prediction_age_65_"] * 100}%"
         }
 
-    def __fetch_gender_demogra(self):
+    def __fetch_gender_demogra(self, channel_id: str):
         """
         デモグラデータを取得
         """
         print(f"実行中のメソッド: {inspect.currentframe().f_code.co_name}")
-        genders = self.db.fetch_gender_demogra_data(self.channel_id)
+        genders = self.db.fetch_gender_demogra_data(channel_id)
         return {
             "推定男性比": f"({(100 - genders["prediction_rate"])}%",
             "推定女性比": f"{genders["prediction_rate"]}%"

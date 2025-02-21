@@ -96,6 +96,8 @@ async def websocket_endpoint(websocket: WebSocket):
         # **プロンプト作成**
         if analysis_type == "comment_analysis":
             prompt = __generate_comment_analysis_prompt(topic, analysis_data)
+        elif analysis_type == "channel_subscriber_popular_channel":
+            prompt = __generate_popular_channels_prompt(topic, analysis_data)
         else:
             prompt = topic  # そのまま議題を使用
 
@@ -254,7 +256,7 @@ def __generate_comment_analysis_prompt(user_input: str, analysis_data: dict) -> 
     """
     prompt = f"議題: '{user_input}'\n\n"
 
-    prompt += "この動画に関する登校日から7日間のコメントデータがあります。\n"
+    prompt += "この動画の投稿日から7日間のコメントデータがあります。\n"
     prompt += f"動画データ: {analysis_data['video_data']}\n"
     prompt += f"コメントデータ:\n{analysis_data['comment_data']}...\n\n"
     prompt += f"動画の10日間の統計データ: {analysis_data['video_stats']}\n"
@@ -273,15 +275,13 @@ def __generate_popular_channels_prompt(user_input: str, analysis_data: dict) -> 
     """
     prompt = f"議題: '{user_input}'\n\n"
 
-    prompt += "この動画に関する登校日から7日間のコメントデータがあります。\n"
-    prompt += f"動画データ: {analysis_data['video_data']}\n"
-    prompt += f"コメントデータ:\n{analysis_data['comment_data']}...\n\n"
-    prompt += f"動画の10日間の統計データ: {analysis_data['video_stats']}\n"
-    prompt += f"チャンネルデータ: {analysis_data['channel_data']}\n"
-    prompt += f"チャンネルの視聴者層の年齢分布予測データ: {analysis_data['age_prediction']}\n"
-    prompt += f"チャンネルの視聴者層の性別分布予測データ: {analysis_data['gender_prediction']}\n"
-    prompt += "これらのデータから、この動画の分析を詳細に報告してください。マークダウンで出力できるようにフォーマットをしてください。"
-    prompt += "また、動画投稿日前後に起きた日本国内での出来事などと、可能であれば関連付けて分析してください。"
+    prompt += "このチャンネルに関するデータがあります。\n"
+    prompt += f"チャンネルデータ: {analysis_data['target_channel_data']}\n"
+    prompt += f"また、このチャンネルを登録しているユーザーが、他にも登録しているチャンネルとユーザーどのくらい重複しているか（重複度）、関係性を示すデータがあります。視聴者人気のチャンネルのデータ: {analysis_data['popular_channels_csv_data']}\n"
+    prompt += f"そこに記載された各チャンネルデータがあります。これを比較チャンネルといいます。\n"
+    prompt += f"比較チャンネルのデータ: {analysis_data['popular_channels_data']}\n"
+    prompt += "これらのデータから、このチャンネルの視聴者層の特徴や、どのようなチャンネルであるか分析を詳細に報告してください。マークダウンで出力できるようにフォーマットをしてください。"
+    return prompt
 
 
 YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")

@@ -244,7 +244,7 @@ export default function Magi() {
                 <Group>
                   <Radio label="分析なし" value="none" />
                   <Radio label="コメント分析" value="comment_analysis" />
-                  <Radio label="視聴者人気のチャンネル分析" value="channel_subscriber_popular_channel" />
+                  <Radio label="視聴者に人気のチャンネル分析" value="channel_subscriber_popular_channel" />
                 </Group>
               </Radio.Group>
 
@@ -258,11 +258,11 @@ export default function Magi() {
                 />
               )}
 
-              {/* ✅ 「視聴者に人気のチャンネル」選択時にyoutube_channel_idのInput を表示 */}
+              {/* ✅ 「視聴者に人気のチャンネル」選択時にyoutube_channel_idのInputを表示 */}
               {analysisType === "channel_subscriber_popular_channel" && (
                 <Input
                   placeholder="youtube_channel_idを入力"
-                  value={videoId}
+                  value={channelId}
                   onChange={(e) => setChannelId(e.target.value)}
                   mt="sm"
                 />
