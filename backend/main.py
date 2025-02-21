@@ -209,6 +209,7 @@ async def websocket_endpoint(websocket: WebSocket):
             コメントから見える動画内容への評価や、視聴者の反応についても含めてください。
             年齢分布予測や性別分布予測などのデモグラフィックデータはチャンネルに対してで動画やコメントから推定した値ではないので注意してください。
             コメントの書き方などからコメントのポジティブ度、ネガティブ度、性別予測などを割合で出してほしいです。
+            データを混同したくないので、あなたが自身が推定したものについては、GPTによる推定と明記してください。
 
             議論データ:
             {conversation_text}
@@ -241,11 +242,32 @@ def load_data_for_analysis(analysis_type: str, video_id: str = None, channel_id:
         return data
 
     if analysis_type == "channel_subscriber_popular_channel" and channel_id:
-        return aurora.fetch_popular_channels(channel_id)
+        data = ChannelPopularityAnalyzer(channel_id).create_data()
+        print(f"data: {data}")
+        return data
 
     return {"message": "データなし"}
 
 def __generate_comment_analysis_prompt(user_input: str, analysis_data: dict) -> str:
+    """
+    ユーザーの議題と `load_data_for_analysis` から取得したデータを組み合わせてプロンプトを生成
+    """
+    prompt = f"議題: '{user_input}'\n\n"
+
+    prompt += "この動画に関する登校日から7日間のコメントデータがあります。\n"
+    prompt += f"動画データ: {analysis_data['video_data']}\n"
+    prompt += f"コメントデータ:\n{analysis_data['comment_data']}...\n\n"
+    prompt += f"動画の10日間の統計データ: {analysis_data['video_stats']}\n"
+    prompt += f"スポンサード動画のデータ: {analysis_data['other_sponsored_video_data']}\n" if analysis_data.get("other_sponsored_video_data") else ""
+    prompt += f"スポンサード動画のコメントデータ: {analysis_data['other_sponsored_video_comments']}\n" if analysis_data.get("その他のスポンサード動画のコメントデータ") else ""
+    prompt += f"チャンネルデータ: {analysis_data['channel_data']}\n"
+    prompt += f"チャンネルの視聴者層の年齢分布予測データ: {analysis_data['age_prediction']}\n"
+    prompt += f"チャンネルの視聴者層の性別分布予測データ: {analysis_data['gender_prediction']}\n"
+    prompt += "これらのデータから、この動画の分析を詳細に報告してください。マークダウンで出力できるようにフォーマットをしてください。"
+    prompt += "また、動画投稿日前後に起きた日本国内での出来事などと、可能であれば関連付けて分析してください。"
+    return prompt
+
+def __generate_popular_channels_prompt(user_input: str, analysis_data: dict) -> str:
     """
     ユーザーの議題と `load_data_for_analysis` から取得したデータを組み合わせてプロンプトを生成
     """
@@ -260,5 +282,3 @@ def __generate_comment_analysis_prompt(user_input: str, analysis_data: dict) -> 
     prompt += f"チャンネルの視聴者層の性別分布予測データ: {analysis_data['gender_prediction']}\n"
     prompt += "これらのデータから、この動画の分析を詳細に報告してください。マークダウンで出力できるようにフォーマットをしてください。"
     prompt += "また、動画投稿日前後に起きた日本国内での出来事などと、可能であれば関連付けて分析してください。"
-
-    return prompt

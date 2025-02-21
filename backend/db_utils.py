@@ -2,6 +2,8 @@ import os
 import pymysql
 import paramiko
 from sshtunnel import SSHTunnelForwarder
+import inspect
+import pymysql.cursors
 
 class DBClient:
     """
@@ -61,7 +63,7 @@ class DBClient:
         """
         youtube_チャンネルID からチャンネル情報を取得する例
         """
-        sql = "SELECT youtube_channel_id, title, description, published_at, branding_keywords, metadata FROM channels WHERE youtube_channel_id = %s"
+        sql = "SELECT id, youtube_channel_id, title, description, published_at, branding_keywords, metadata FROM channels WHERE youtube_channel_id = %s"
         conn = self.__get_connection()
         try:
             with conn.cursor() as cur:
@@ -76,13 +78,41 @@ class DBClient:
         """
         指定された動画IDから動画データを取得
         """
-        sql = "SELECT youtube_video_id, title, title_keywords, description, metadata, published_at FROM videos WHERE youtube_video_id = %s"
+        sql = "SELECT v.youtube_video_id as youtube_video_id, v.title as title, v.title_keywords as title_keywords, v.description as description, v.metadata as metadata, v.published_at as published_at, pv.is_sponsored as is_sponsored, pv.product_id as product_id FROM videos v left join product_videos pv on v.id = pv.video_id WHERE youtube_video_id = %s"
         conn = self.__get_connection()
         try:
             with conn.cursor() as cur:
                 cur.execute(sql, (youtube_video_id,))
                 row = cur.fetchone()
                 return row
+        finally:
+            conn.close()
+            self.__close_tunnel()
+
+    # product_idを元に他のスポンサード動画の情報を取得（投稿日降順、上位10件）
+    def fetch_other_product_videos(self, product_id: str):
+        print(f"実行中のメソッド db_utils: {inspect.currentframe().f_code.co_name}")
+        sql = """
+            SELECT v.youtube_video_id AS youtube_video_id,
+                v.title AS title,
+                v.title_keywords AS title_keywords,
+                v.description AS description,
+                v.metadata AS metadata,
+                v.published_at AS published_at,
+                pv.is_sponsored AS is_sponsored
+            FROM product_videos pv
+            LEFT JOIN videos v ON pv.video_id = v.id
+            WHERE pv.product_id = %s
+            ORDER BY v.published_at DESC
+            LIMIT 10
+        """
+        conn = self.__get_connection()
+        try:
+            # ✅ `DictCursor` を使って辞書形式で取得
+            with conn.cursor(pymysql.cursors.DictCursor) as cur:
+                cur.execute(sql, (product_id,))
+                rows = cur.fetchall()  # `fetchone()` ではなく `fetchall()` に変更
+                return rows  # ✅ 複数行をリストで返す
         finally:
             conn.close()
             self.__close_tunnel()
