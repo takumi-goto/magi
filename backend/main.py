@@ -117,10 +117,10 @@ async def websocket_endpoint(websocket: WebSocket):
             return
 
         # **初期発言を送信 & 履歴保存**
-        await websocket.send_text(json.dumps({"sender": f"GPT({GPT_MODEL_NAME})", "text": gpt_first}))
+        await websocket.send_text(json.dumps({"sender": f"model:{GPT_MODEL_NAME}", "text": gpt_first}))
         conversation_history.append((f"GPT({GPT_MODEL_NAME})", gpt_first))
 
-        await websocket.send_text(json.dumps({"sender": f"Gemini({GEMINI_MODEL_NAME})", "text": gemini_first}))
+        await websocket.send_text(json.dumps({"sender": f"model:{GEMINI_MODEL_NAME}", "text": gemini_first}))
         conversation_history.append((f"Gemini({GEMINI_MODEL_NAME})", gemini_first))
 
         # **(2) 議論の進行**
