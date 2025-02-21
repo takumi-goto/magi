@@ -1,6 +1,5 @@
 "use client";
 
-import { Container } from "@mantine/core";
 import Sidebar from "./Sidebar";
 
 export default function BaseLayout({ children }: { children: React.ReactNode }) {

@@ -1,5 +1,3 @@
-import pandas as pd
-from datetime import datetime, timedelta
 from db_utils import DBClient
 from s3_utils import S3Client
 

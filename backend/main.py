@@ -2,10 +2,7 @@ import os
 import logging
 import random
 import json
-import asyncio
-import inspect
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import requests
 from analyze_thumbnail import AnalyzeThumbnail
