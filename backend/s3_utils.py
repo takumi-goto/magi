@@ -36,6 +36,20 @@ class S3Client:
         csv_text = buffer.read().decode("utf-8")
         return csv_text
 
+    def load_json_as_text(self, s3_key: str) -> str:
+        """
+        S3上の JSON (テキスト) をダウンロードして、文字列として返す
+        """
+        buffer = BytesIO()
+        self.s3_client.download_fileobj(
+            Bucket=self.bucket_name,
+            Key=s3_key,
+            Fileobj=buffer
+        )
+        buffer.seek(0)
+        json_text = buffer.read().decode("utf-8")
+        return json_text
+
     def load_file_to_local(self, s3_key: str, local_path: str):
         """
         S3のファイルをローカルに保存する（CSV以外でも可）
