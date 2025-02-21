@@ -4,8 +4,11 @@ import random
 import json
 import asyncio
 import inspect
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Query
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
+import requests
+from analyze_thumbnail import AnalyzeThumbnail
 
 import openai
 from google import genai
@@ -282,3 +285,63 @@ def __generate_popular_channels_prompt(user_input: str, analysis_data: dict) -> 
     prompt += f"チャンネルの視聴者層の性別分布予測データ: {analysis_data['gender_prediction']}\n"
     prompt += "これらのデータから、この動画の分析を詳細に報告してください。マークダウンで出力できるようにフォーマットをしてください。"
     prompt += "また、動画投稿日前後に起きた日本国内での出来事などと、可能であれば関連付けて分析してください。"
+
+
+YOUTUBE_API_KEY = os.getenv("YOUTUBE_API_KEY")
+
+# ✅ CORS 設定（Next.jsと通信可能にする）
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 必要に応じてNext.jsのURLを指定（例: ["http://localhost:3000"]）
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ✅ YouTube Data API で動画のサムネイルURLを取得
+def get_video_thumbnail(video_id: str) -> str:
+    youtube_api_url = f"https://www.googleapis.com/youtube/v3/videos?id={video_id}&key={YOUTUBE_API_KEY}&part=snippet"
+
+    response = requests.get(youtube_api_url)
+    if response.status_code != 200:
+        raise HTTPException(status_code=500, detail="YouTube API からのレスポンス取得に失敗しました")
+
+    data = response.json()
+
+    print(f"video api data: {data}")
+
+    if "items" not in data or len(data["items"]) == 0:
+        raise HTTPException(status_code=404, detail="指定された動画が見つかりません")
+
+    # ✅ サムネイルURLを取得（高解像度のものを優先）
+    snippet = data["items"][0]["snippet"]
+    thumbnails = snippet["thumbnails"]
+
+    # 高画質のサムネイルを取得（利用可能なものを優先）
+    thumbnail_url = thumbnails.get("high", {}).get("url")
+
+    print(f"thumbnail_url: {thumbnail_url}")
+
+    if not thumbnail_url:
+        raise HTTPException(status_code=404, detail="サムネイルが見つかりません")
+
+    return thumbnail_url
+
+# サムネイル画像を取得して分析するエンドポイント
+@app.get("/api/analyze-thumbnail")
+async def analyze_thumbnail(video_id: str):
+    if not video_id:
+        raise HTTPException(status_code=400, detail="動画IDが必要です")
+
+    # YouTube Data API でサムネイル URL を取得
+    print(f"video_id: {video_id}")
+    thumbnail_url = get_video_thumbnail(video_id)
+
+    # サムネイル画像にアクセス
+    try:
+        instance = AnalyzeThumbnail(thumbnail_url)
+        analysis_result = instance.analyze()
+        return analysis_result
+
+    except requests.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"サムネイル画像の取得に失敗しました: {str(e)}")
