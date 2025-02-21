@@ -248,12 +248,22 @@ export default function Magi() {
                 </Group>
               </Radio.Group>
 
-              {/* ✅ 「コメント分析」選択時に YouTube Video ID の Input を表示 */}
+              {/* ✅ 「コメント分析」選択時にyoutube_video_idのInputを表示 */}
               {analysisType === "comment_analysis" && (
                 <Input
-                  placeholder="YouTube Video ID を入力"
+                  placeholder="youtube_video_idを入力"
                   value={videoId}
                   onChange={(e) => setVideoId(e.target.value)}
+                  mt="sm"
+                />
+              )}
+
+              {/* ✅ 「視聴者に人気のチャンネル」選択時にyoutube_channel_idのInput を表示 */}
+              {analysisType === "channel_subscriber_popular_channel" && (
+                <Input
+                  placeholder="youtube_channel_idを入力"
+                  value={videoId}
+                  onChange={(e) => setChannelId(e.target.value)}
                   mt="sm"
                 />
               )}
