@@ -5,7 +5,7 @@ import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { marked } from "marked";
 import WebSocketManager from "../../../utils/WebSocketManager";
-import { Textarea, Button, Space, Group, Title, Box, Stack, Radio, Paper, Avatar, Text, ScrollArea, Accordion, Input} from '@mantine/core';
+import { Textarea, Button, Space, Group, Title, Box, Stack, Radio, Paper, Avatar, Text, ScrollArea, Accordion, Input, Image } from '@mantine/core';
 import { IconDownload, IconChevronDown } from '@tabler/icons-react';
 
 interface Message {
@@ -209,7 +209,14 @@ export default function Magi() {
         justify="center"
         gap="lg"
       >
-        <Title order={1}>MAG(K)I:||</Title>
+          <Image
+            src="/kamui-assistant-logo.png"
+            alt="kamuiassistant"
+            width={50}
+            height={50}
+            fit="contain"
+            style={{ margin: "0 auto" }}
+          />
         <Box style={{ overflow: 'hidden' }}>
           <Group>
             <Textarea
